@@ -1,0 +1,6 @@
+{
+  "name": "In-Fin Pharmacy PHP",
+  "image": "mcr.microsoft.com/devcontainers/php:1-8.2-bullseye",
+  "forwardPorts": [3000],
+  "postCreateCommand": "php -v"
+}

@@ -1,0 +1,4 @@
+link: pegar aqui el link publico de Github Codespaces
+
+Ejemplo:
+link: https://nombre-del-codespace-3000.app.github.dev
