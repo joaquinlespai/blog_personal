@@ -111,6 +111,47 @@ function logAction(PDO $pdo, string $accion, string $entidad, ?int $registroId, 
 $message = '';
 $errors = [];
 $loginError = '';
+$registerError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'register') {
+    $nombre = cleanText($_POST['nombre_usuario'] ?? '');
+    $email = cleanText($_POST['email_registro'] ?? '');
+    $password = (string) ($_POST['password_registro'] ?? '');
+    $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+
+    if ($nombre === '') {
+        $registerError = 'El nombre es obligatorio.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $registerError = 'Ingresa un correo valido.';
+    } elseif (strlen($password) < 6) {
+        $registerError = 'La contrasena debe tener al menos 6 caracteres.';
+    } elseif ($password !== $confirmPassword) {
+        $registerError = 'Las contrasenas no coinciden.';
+    } else {
+        $emailExists = $pdo->prepare('SELECT COUNT(*) FROM usuarios WHERE email = ?');
+        $emailExists->execute([$email]);
+
+        if ((int) $emailExists->fetchColumn() > 0) {
+            $registerError = 'Ya existe un usuario con ese correo.';
+        } else {
+            $createUser = $pdo->prepare("
+                INSERT INTO usuarios (nombre, email, password_hash, rol)
+                VALUES (?, ?, ?, ?)
+            ");
+            $createUser->execute([$nombre, $email, password_hash($password, PASSWORD_DEFAULT), 'admin']);
+            $newUserId = (int) $pdo->lastInsertId();
+
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $newUserId;
+            $_SESSION['user_nombre'] = $nombre;
+            $_SESSION['user_email'] = $email;
+
+            logAction($pdo, 'Registro de usuario', 'usuarios', $newUserId, 'Se registro el usuario: ' . $nombre . '.');
+            header('Location: index.php?msg=registered');
+            exit;
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     $email = cleanText($_POST['email'] ?? '');
@@ -219,6 +260,7 @@ $messages = [
     'deleted' => 'Medicamento eliminado correctamente.',
     'login' => 'Sesion iniciada correctamente.',
     'logout' => 'Sesion cerrada correctamente.',
+    'registered' => 'Usuario registrado correctamente.',
 ];
 $message = $messages[$_GET['msg'] ?? ''] ?? '';
 
@@ -469,8 +511,22 @@ if ($isAuthenticated) {
         }
 
         .login-section {
-            max-width: 520px;
+            max-width: 960px;
             margin: 42px auto;
+        }
+
+        .auth-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .auth-panel {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+            background: #f8fafc;
         }
 
         .login-help {
@@ -587,7 +643,8 @@ if ($isAuthenticated) {
         @media (max-width: 900px) {
             header,
             .hero,
-            .app-grid {
+            .app-grid,
+            .auth-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -656,30 +713,62 @@ if ($isAuthenticated) {
     <main>
         <?php if (!$isAuthenticated): ?>
             <section class="login-section">
-                <h1>Iniciar sesion</h1>
-                <p>Ingresa con una cuenta autorizada para administrar medicamentos y registrar el historial de cambios.</p>
+                <h1>Acceso al sistema</h1>
+                <p>Ingresa o registra una cuenta para administrar medicamentos y dejar historial de cambios.</p>
 
                 <?php if ($message): ?>
                     <div class="notice"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
 
-                <?php if ($loginError): ?>
-                    <div class="errors"><?php echo htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8'); ?></div>
-                <?php endif; ?>
+                <div class="auth-grid">
+                    <div class="auth-panel">
+                        <h2>Iniciar sesion</h2>
 
-                <form method="post">
-                    <input type="hidden" name="action" value="login">
+                        <?php if ($loginError): ?>
+                            <div class="errors"><?php echo htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php endif; ?>
 
-                    <label for="email">Correo</label>
-                    <input id="email" name="email" type="email" required autocomplete="username" value="admin@infin.cl">
+                        <form method="post">
+                            <input type="hidden" name="action" value="login">
 
-                    <label for="password">Contrasena</label>
-                    <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="admin123">
+                            <label for="email">Correo</label>
+                            <input id="email" name="email" type="email" required autocomplete="username" value="admin@infin.cl">
 
-                    <button type="submit">Entrar</button>
-                </form>
+                            <label for="password">Contrasena</label>
+                            <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="admin123">
 
-                <p class="login-help">Usuario de prueba: <strong>admin@infin.cl</strong> / <strong>admin123</strong></p>
+                            <button type="submit">Entrar</button>
+                        </form>
+
+                        <p class="login-help">Usuario de prueba: <strong>admin@infin.cl</strong> / <strong>admin123</strong></p>
+                    </div>
+
+                    <div class="auth-panel">
+                        <h2>Registrarse</h2>
+
+                        <?php if ($registerError): ?>
+                            <div class="errors"><?php echo htmlspecialchars($registerError, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php endif; ?>
+
+                        <form method="post">
+                            <input type="hidden" name="action" value="register">
+
+                            <label for="nombre_usuario">Nombre</label>
+                            <input id="nombre_usuario" name="nombre_usuario" required autocomplete="name">
+
+                            <label for="email_registro">Correo</label>
+                            <input id="email_registro" name="email_registro" type="email" required autocomplete="email">
+
+                            <label for="password_registro">Contrasena</label>
+                            <input id="password_registro" name="password_registro" type="password" minlength="6" required autocomplete="new-password">
+
+                            <label for="confirm_password">Confirmar contrasena</label>
+                            <input id="confirm_password" name="confirm_password" type="password" minlength="6" required autocomplete="new-password">
+
+                            <button type="submit">Crear cuenta</button>
+                        </form>
+                    </div>
+                </div>
             </section>
         <?php else: ?>
         <section class="hero" id="inicio">

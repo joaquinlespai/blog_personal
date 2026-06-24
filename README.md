@@ -10,7 +10,7 @@ Proyecto PHP + SQLite para la entrega de CRUD en Github Codespaces.
 
 ## Tema
 
-Sistema web para gestionar el inventario de medicamentos de una farmacia. La aplicacion permite iniciar sesion, cerrar sesion, crear, leer, modificar y eliminar medicamentos usando una base de datos SQLite. Tambien registra un historial de cambios con usuario, fecha, accion y detalle.
+Sistema web para gestionar el inventario de medicamentos de una farmacia. La aplicacion permite registrar usuarios, iniciar sesion, cerrar sesion, crear, leer, modificar y eliminar medicamentos usando una base de datos SQLite. Tambien registra un historial de cambios con usuario, fecha, accion y detalle.
 
 ## Archivos principales
 
@@ -36,4 +36,4 @@ Luego abrir el puerto `3000` como publico y copiar el enlace terminado en `.app.
 - Correo: `admin@infin.cl`
 - Contrasena: `admin123`
 
-El historial registra inicio de sesion, cierre de sesion y cambios CRUD sobre medicamentos.
+Tambien se puede crear una cuenta nueva desde la pantalla de acceso. El historial registra registro de usuario, inicio de sesion, cierre de sesion y cambios CRUD sobre medicamentos.
